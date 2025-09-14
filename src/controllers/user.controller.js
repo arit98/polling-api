@@ -3,6 +3,7 @@ import bcrypt from "bcrypt";
 import prisma from "../lib/prisma.js";
 import { ApiError } from "../lib/ApiError.js";
 import jwt from "jsonwebtoken";
+import { ApiResponse } from "../lib/ApiResponse.js";
 
 // register
 const registerUser = asyncHandler(async function name(req, res) {
@@ -17,12 +18,14 @@ const registerUser = asyncHandler(async function name(req, res) {
     const user = await prisma.user.create({
       data: { name, email, passwordHash, role },
     });
-    res.json({
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-    });
+    res.json(
+      new ApiResponse(201, {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      })
+    );
   } catch (error) {
     throw new ApiError(500, "somthing went wrong when creating user");
   }
@@ -55,10 +58,7 @@ const loginUser = asyncHandler(async (req, res) => {
       { expiresIn: "1h" }
     );
 
-    res.json({
-      message: "Login successful",
-      token,
-    });
+    res.json(new ApiResponse(200, token, "Login successful"));
   } catch (error) {
     console.error(error);
     throw new ApiError(500, "Something went wrong");
@@ -75,27 +75,25 @@ const getUser = asyncHandler(async (req, res) => {
   if (!user) {
     throw new ApiError(404, "User not found");
   }
-  res.json(user);
+  res.json(new ApiResponse(200, user));
 });
 
 // get single users
-const getUsers = asyncHandler(
-  async function name(req, res) {
-    const user = await prisma.user.findMany({
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        createdAt: true,
-      },
-    });
-    if (!user) {
-      throw new ApiError(404, "User not found");
-    }
-    res.json(user);
+const getUsers = asyncHandler(async function name(req, res) {
+  const user = await prisma.user.findMany({
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      createdAt: true,
+    },
+  });
+  if (!user) {
+    throw new ApiError(404, "User not found");
   }
-);
+  res.json(new ApiResponse(200, user));
+});
 
 // update user
 const updateUser = asyncHandler(async (req, res) => {
@@ -126,7 +124,7 @@ const updateUser = asyncHandler(async (req, res) => {
       },
     });
 
-    res.json(updatedUser);
+    res.json(new ApiResponse(200, updatedUser, "User updated successfully"));
   } catch (error) {
     throw new ApiError(
       500,
@@ -148,7 +146,7 @@ const deleteUser = asyncHandler(async (req, res) => {
 
     await prisma.user.deleteMany({ where: { id } });
 
-    res.json({ success: true, message: "User deleted successfully" });
+    res.json(new ApiResponse(200, "User deleted successfully"));
   } catch (error) {
     throw new ApiError(
       500,
@@ -157,11 +155,4 @@ const deleteUser = asyncHandler(async (req, res) => {
   }
 });
 
-export {
-    registerUser,
-    loginUser,
-    getUser,
-    getUsers,
-    updateUser,
-    deleteUser
-}
+export { registerUser, loginUser, getUser, getUsers, updateUser, deleteUser };

@@ -42,13 +42,12 @@ run this command on **psql** shell `
     CREATE DATABASE polls_db;
 `
 
-run this command to generate `
-npx prisma generate
-`
+run this command to generate `npx prisma generate`
 
-run this command to migrate the dbs `
-npx prisma migrate dev --name add_role_to_user
-`
+incase of migrate if it will ask for migration reset `npx prisma migrate reset`
+
+run this command to migrate the dbs `npx prisma migrate dev --name add_role_to_user`
+
 endpoints:
 #### Users
 - POST /api/user/register - Register new user

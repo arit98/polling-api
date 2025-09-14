@@ -1,4 +1,5 @@
 import { ApiError } from "../lib/ApiError.js";
+import { ApiResponse } from "../lib/ApiResponse.js";
 import asyncHandler from "../lib/asyncHandler.js";
 import prisma from "../lib/prisma.js";
 
@@ -23,15 +24,16 @@ const createVote = asyncHandler(async (req, res) => {
           isPublished: true,
           creatorId: user.id,
           options: {
-            create: options.map((opt) => ({
+            create: options.map((opt, i) => ({
               text: typeof opt === "string" ? opt : opt.text,
+              id: i+1,
             })),
           },
         },
         include: { options: true, creator: true },
       });
   
-      res.json(poll);
+      res.json(new ApiResponse(201, poll, "Poll created successfully"));
     } catch (error) {
       console.log(error);
       throw new ApiError(500, "somthing went wrong when creating poll");
@@ -50,7 +52,8 @@ const createVote = asyncHandler(async (req, res) => {
   
     if (!poll) throw new ApiError(404, "Poll not found");
   
-    res.json({
+    res.json(
+      new ApiResponse(200,{
       id: poll.id,
       question: poll.question,
       creator: poll.creator,
@@ -59,7 +62,8 @@ const createVote = asyncHandler(async (req, res) => {
         text: o.text,
         votes: o.votes.length,
       })),
-    });
+    })
+  );
   });
   
   const postVote = asyncHandler(async (req, res) => {
@@ -72,8 +76,11 @@ const createVote = asyncHandler(async (req, res) => {
   
       // poll validation check
       const option = await prisma.pollOption.findUnique({
-        where: { id: Number(optionId) },
+        where: {
+          pollId_id: { pollId, id: Number(optionId) }
+        }
       });
+
       if (!option || option.pollId !== pollId)
         throw new ApiError(400, "Invalid option");
   
@@ -87,7 +94,7 @@ const createVote = asyncHandler(async (req, res) => {
   
       // create a new vote
       const vote = await prisma.vote.create({
-        data: { userId, optionId: Number(optionId), pollId },
+        data: { userId, pollId, optionId: Number(optionId)},
       });
   
       // recalculate
@@ -106,7 +113,7 @@ const createVote = asyncHandler(async (req, res) => {
       const io = req.app.get("io");
       if (io) io.to(`poll_${pollId}`).emit("poll_updated", { pollId, results });
   
-      res.json({ success: true, vote, results });
+      res.json(new ApiResponse(201, {vote, results}, "Your vote posted"));
     } catch (error) {
       console.log(error)
       throw new ApiError(500, error.message || "Something went wrong");
